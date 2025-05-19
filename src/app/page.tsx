@@ -18,6 +18,7 @@ const AlgoAcePage: FC = () => {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [code, setCode] = useState<string>('');
+  const [currentLanguage, setCurrentLanguage] = useState<CodingLanguage>('javascript');
   
   const [isLoadingProblem, setIsLoadingProblem] = useState(false);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
@@ -25,9 +26,10 @@ const AlgoAcePage: FC = () => {
 
   const handleGenerateProblem = async (values: { difficulty: ProblemDifficulty; topics: string; language: CodingLanguage }) => {
     setIsLoadingProblem(true);
-    setProblem(null); // Clear previous problem
-    setAnalysis(null); // Clear previous analysis
-    setCode(''); // Clear previous code
+    setProblem(null); 
+    setAnalysis(null); 
+    setCode(''); 
+    setCurrentLanguage(values.language); // Set language based on form selection for upcoming problem
     try {
       const problemInput: GenerateProblemInput = {
         difficulty: values.difficulty,
@@ -36,9 +38,10 @@ const AlgoAcePage: FC = () => {
       };
       const generatedProblem = await generateProblem(problemInput);
       setProblem(generatedProblem);
+      setCurrentLanguage(generatedProblem.language); // Confirm language from generated problem
       toast({
         title: "Problem Generated!",
-        description: "A new coding challenge is ready for you.",
+        description: `A new ${generatedProblem.language} challenge is ready for you.`,
       });
     } catch (error) {
       console.error("Failed to generate problem:", error);
@@ -47,6 +50,8 @@ const AlgoAcePage: FC = () => {
         description: "Could not generate a new problem. Please try again.",
         variant: "destructive",
       });
+      setProblem(null); // Ensure problem is null on error
+      setCurrentLanguage('javascript'); // Reset language to default on error
     } finally {
       setIsLoadingProblem(false);
     }
@@ -62,11 +67,11 @@ const AlgoAcePage: FC = () => {
       return;
     }
     setIsLoadingAnalysis(true);
-    setAnalysis(null); // Clear previous analysis
+    setAnalysis(null);
     try {
       const analysisInput: AnalyzeCodeInput = {
         code,
-        language: problem.title.toLowerCase().includes("python") ? 'python' : 'javascript', // Infer from problem or use selected lang
+        language: problem.language, // Use the language from the generated problem
         problemDescription: problem.description,
       };
       const analysisResult = await analyzeCode(analysisInput);
@@ -86,18 +91,7 @@ const AlgoAcePage: FC = () => {
       setIsLoadingAnalysis(false);
     }
   };
-
-  // Determine current language from problem if available, or default
-  // This assumes language is implicitly part of the problem or selected globally
-  // For this setup, we rely on the language chosen during problem generation.
-  // The CodeEditor can display the language based on what was used for problem generation.
-  // We'll assume the problem object might hint at the language or it's consistent with the generator form's last selection.
-  // A more robust solution would pass the selected language explicitly through all stages.
-  // For now, the language parameter for `analyzeCode` will try to infer.
   
-  const currentLanguage = (problem && problem.examples.toLowerCase().includes('def ')) ? 'python' : 'javascript';
-
-
   const ProblemDisplayPlaceholder: FC = () => (
     <Card className="shadow-lg h-full">
       <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -169,7 +163,7 @@ const AlgoAcePage: FC = () => {
           {/* Right Pane */}
           <div className="w-full lg:w-1/2 flex flex-col gap-6">
             <CodeEditor
-              language={currentLanguage}
+              language={problem?.language || currentLanguage} // Use problem's language or fallback to selected
               problemDescription={problem?.description || ''}
               code={code}
               setCode={setCode}

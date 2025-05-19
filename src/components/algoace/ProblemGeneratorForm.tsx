@@ -12,12 +12,14 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
 
+const codingLanguages: [CodingLanguage, ...CodingLanguage[]] = ['javascript', 'python', 'java', 'cpp', 'go'];
+
 const formSchema = z.object({
   difficulty: z.enum(['easy', 'medium', 'hard'] as [ProblemDifficulty, ...ProblemDifficulty[]], {
     required_error: "Difficulty is required.",
   }),
-  topics: z.string().min(1, "Topics are required."),
-  language: z.enum(['javascript', 'python'] as [CodingLanguage, ...CodingLanguage[]], {
+  topics: z.string().min(1, "Topics are required (e.g., arrays, strings, trees, graphs, dynamic programming, sorting, searching)."),
+  language: z.enum(codingLanguages, {
     required_error: "Language is required.",
   }),
 });
@@ -34,7 +36,7 @@ export function ProblemGeneratorForm({ onGenerateProblem, isLoading }: ProblemGe
     resolver: zodResolver(formSchema),
     defaultValues: {
       difficulty: 'easy',
-      topics: 'arrays, strings',
+      topics: 'arrays, strings, basic algorithms',
       language: 'javascript',
     },
   });
@@ -50,7 +52,7 @@ export function ProblemGeneratorForm({ onGenerateProblem, isLoading }: ProblemGe
           <Sparkles className="h-6 w-6 text-primary" />
           Generate Coding Problem
         </CardTitle>
-        <CardDescription>Select difficulty, topics, and language to generate a new coding challenge.</CardDescription>
+        <CardDescription>Select difficulty, topics (e.g., Data Structures & Algorithms), and language to generate a new coding challenge.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -82,9 +84,9 @@ export function ProblemGeneratorForm({ onGenerateProblem, isLoading }: ProblemGe
               name="topics"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Topics</FormLabel>
+                  <FormLabel>Topics / Keywords</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., arrays, dynamic programming" {...field} disabled={isLoading} />
+                    <Input placeholder="e.g., linked lists, trees, graphs, dynamic programming, sorting" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -100,7 +102,7 @@ export function ProblemGeneratorForm({ onGenerateProblem, isLoading }: ProblemGe
                     <RadioGroup
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      className="flex flex-col space-y-1"
+                      className="grid grid-cols-2 gap-x-4 gap-y-2"
                       disabled={isLoading}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
@@ -114,6 +116,24 @@ export function ProblemGeneratorForm({ onGenerateProblem, isLoading }: ProblemGe
                           <RadioGroupItem value="python" />
                         </FormControl>
                         <FormLabel className="font-normal">Python</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="java" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Java</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="cpp" />
+                        </FormControl>
+                        <FormLabel className="font-normal">C++</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="go" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Go</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>

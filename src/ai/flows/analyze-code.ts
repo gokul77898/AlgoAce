@@ -10,10 +10,13 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { CodingLanguage } from '@/lib/types';
+
+const codingLanguages: [CodingLanguage, ...CodingLanguage[]] = ['javascript', 'python', 'java', 'cpp', 'go'];
 
 const AnalyzeCodeInputSchema = z.object({
   code: z.string().describe('The code to be analyzed.'),
-  language: z.enum(['javascript', 'python']).describe('The programming language of the code.'),
+  language: z.enum(codingLanguages).describe('The programming language of the code.'),
   problemDescription: z.string().describe('The description of the problem the code is trying to solve.'),
 });
 export type AnalyzeCodeInput = z.infer<typeof AnalyzeCodeInputSchema>;
@@ -45,7 +48,7 @@ const analyzeCodePrompt = ai.definePrompt({
   - Code clarity and readability
   - Efficiency and performance
   - Potential bugs and errors
-  - Adherence to best practices
+  - Adherence to best practices for the specified language ({{language}})
 
   Provide an overall assessment of the code quality and a list of suggestions for improvement.
   Format the output as a JSON object with 'suggestions' (an array of strings) and 'overallQuality' (a string).
