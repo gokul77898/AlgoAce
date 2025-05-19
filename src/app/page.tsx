@@ -1,28 +1,33 @@
 'use client';
 
-import { useState, type FC } from 'react';
-import type { Problem, AnalysisResult, CodingLanguage, ProblemDifficulty, DsaTopic } from '@/lib/types';
+import { useState, type FC, useEffect } from 'react';
+import type { Problem, AnalysisResult, CodingLanguage, ProblemDifficulty, DsaTopic, ChatMessage } from '@/lib/types';
 import { generateProblem, type GenerateProblemInput } from '@/ai/flows/generate-problem';
 import { analyzeCode, type AnalyzeCodeInput } from '@/ai/flows/analyze-code';
+import { chatbotProcessMessage, type ChatbotInput } from '@/ai/flows/chatbot-flow';
 import { AppHeader } from '@/components/algoace/AppHeader';
 import { ProblemGeneratorForm } from '@/components/algoace/ProblemGeneratorForm';
 import { ProblemDisplay } from '@/components/algoace/ProblemDisplay';
 import { CodeEditor } from '@/components/algoace/CodeEditor';
 import { AnalysisDisplay } from '@/components/algoace/AnalysisDisplay';
+import { Chatbot } from '@/components/algoace/Chatbot';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { CODING_LANGUAGES } from '@/lib/types';
+import type { ContentPart } from 'genkit/model';
 
 const AlgoAcePage: FC = () => {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [code, setCode] = useState<string>('');
   const [currentLanguage, setCurrentLanguage] = useState<CodingLanguage>(CODING_LANGUAGES[0]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   
   const [isLoadingProblem, setIsLoadingProblem] = useState(false);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [isLoadingBotResponse, setIsLoadingBotResponse] = useState(false);
   const { toast } = useToast();
 
   const handleGenerateProblem = async (values: { difficulty: ProblemDifficulty; topics: DsaTopic[]; language: CodingLanguage }) => {
@@ -31,6 +36,7 @@ const AlgoAcePage: FC = () => {
     setAnalysis(null); 
     setCode(''); 
     setCurrentLanguage(values.language); 
+    setChatHistory([]); // Reset chat history when a new problem is generated
     try {
       const problemInput: GenerateProblemInput = {
         difficulty: values.difficulty,
@@ -92,6 +98,68 @@ const AlgoAcePage: FC = () => {
       setIsLoadingAnalysis(false);
     }
   };
+
+  const handleSendChatMessage = async (
+    message: string,
+    currentProblemContext: Problem | null,
+    currentCodeContext: string,
+    currentChatHistory: ChatMessage[]
+  ): Promise<string | null> => {
+    setIsLoadingBotResponse(true);
+    const userMessageId = Date.now().toString();
+    const userMessageEntry: ChatMessage = { id: userMessageId, role: 'user', text: message };
+    
+    // Add user message and a temporary bot loading message
+    setChatHistory(prev => [...prev, userMessageEntry, {id: `${userMessageId}-botload`, role: 'bot', text: '', isLoading: true}]);
+
+    try {
+      const chatbotInput: ChatbotInput = {
+        userMessage: message,
+        problemTitle: currentProblemContext?.title,
+        problemDescription: currentProblemContext?.description,
+        currentCode: currentCodeContext,
+        chatHistory: currentChatHistory.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'model', // Map to Genkit's expected roles
+          parts: [{text: msg.text}] as ContentPart[],
+        })),
+      };
+      const response = await chatbotProcessMessage(chatbotInput);
+      
+      setChatHistory(prev => {
+        const updatedHistory = [...prev];
+        const loadingBotMsgIndex = updatedHistory.findIndex(msg => msg.isLoading);
+        if (loadingBotMsgIndex !== -1) {
+          updatedHistory[loadingBotMsgIndex] = { id: `${userMessageId}-bot`, role: 'bot', text: response.botResponse };
+        } else {
+           // Should not happen if loading message was added, but as a fallback
+          updatedHistory.push({ id: `${userMessageId}-bot`, role: 'bot', text: response.botResponse });
+        }
+        return updatedHistory;
+      });
+      return response.botResponse;
+    } catch (error) {
+      console.error("Failed to get chatbot response:", error);
+      const errorText = "Sorry, I encountered an error. Please try again.";
+      setChatHistory(prev => {
+         const updatedHistory = [...prev];
+        const loadingBotMsgIndex = updatedHistory.findIndex(msg => msg.isLoading);
+        if (loadingBotMsgIndex !== -1) {
+          updatedHistory[loadingBotMsgIndex] = { id: `${userMessageId}-bot-error`, role: 'bot', text: errorText };
+        } else {
+          updatedHistory.push({ id: `${userMessageId}-bot-error`, role: 'bot', text: errorText });
+        }
+        return updatedHistory;
+      });
+      toast({
+        title: "Chatbot Error",
+        description: "Could not get a response from the assistant.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoadingBotResponse(false);
+    }
+  };
   
   const ProblemDisplayPlaceholder: FC = () => (
     <Card className="shadow-lg h-full">
@@ -112,7 +180,7 @@ const AlgoAcePage: FC = () => {
 
   const AnalysisDisplayPlaceholder: FC = () => (
      <Card className="shadow-lg">
-      <CardContent className="flex flex-col items-center justify-center p-6 text-center min-h-[200px]">
+      <CardContent className="flex flex-col items-center justify-center p-6 text-center min-h-[150px]">
         <Image 
             src="https://placehold.co/200x150.png" 
             alt="Placeholder for analysis" 
@@ -149,9 +217,9 @@ const AlgoAcePage: FC = () => {
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader />
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Pane */}
-          <div className="w-full lg:w-1/2 flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
             <ProblemGeneratorForm
               onGenerateProblem={handleGenerateProblem}
               isLoading={isLoadingProblem}
@@ -162,7 +230,7 @@ const AlgoAcePage: FC = () => {
           </div>
 
           {/* Right Pane */}
-          <div className="w-full lg:w-1/2 flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
             <CodeEditor
               language={problem?.language || currentLanguage} 
               problemDescription={problem?.description || ''}
@@ -172,9 +240,26 @@ const AlgoAcePage: FC = () => {
               isLoading={isLoadingAnalysis}
               disabled={!problem || isLoadingProblem}
             />
-            {isLoadingAnalysis && <LoadingSkeleton section="analysis" />}
-            {!isLoadingAnalysis && analysis && <AnalysisDisplay analysis={analysis} />}
-            {!isLoadingAnalysis && !analysis && <AnalysisDisplayPlaceholder />}
+            
+            <div className="grid grid-rows-[auto_minmax(0,1fr)] gap-6 lg:grid-rows-1 lg:grid-cols-2">
+                <div className="lg:col-span-1">
+                    {isLoadingAnalysis && <LoadingSkeleton section="analysis" />}
+                    {!isLoadingAnalysis && analysis && <AnalysisDisplay analysis={analysis} />}
+                    {!isLoadingAnalysis && !analysis && <AnalysisDisplayPlaceholder />}
+                </div>
+                <div className="lg:col-span-1 h-full">
+                    <Chatbot 
+                        currentProblem={problem}
+                        currentCode={code}
+                        onSendMessage={handleSendChatMessage}
+                        chatHistory={chatHistory}
+                        isLoadingBotResponse={isLoadingBotResponse}
+                        disabled={!problem || isLoadingProblem}
+                    />
+                </div>
+            </div>
+
+
           </div>
         </div>
       </main>

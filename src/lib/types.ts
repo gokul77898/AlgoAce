@@ -1,5 +1,6 @@
 import type { GenerateProblemOutput } from '@/ai/flows/generate-problem';
 import type { AnalyzeCodeOutput } from '@/ai/flows/analyze-code';
+import type { ChatbotResponse } from '@/ai/flows/chatbot-flow';
 
 export type ProblemDifficulty = 'easy' | 'medium' | 'hard';
 
@@ -54,3 +55,12 @@ export type DsaTopic = typeof DSA_TOPICS[number];
 
 export type Problem = GenerateProblemOutput & { language: CodingLanguage };
 export type AnalysisResult = AnalyzeCodeOutput;
+
+export type ChatMessage = {
+  id: string;
+  role: 'user' | 'bot';
+  text: string;
+  isLoading?: boolean;
+};
+
+export type BotResponse = ChatbotResponse;
