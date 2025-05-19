@@ -9,13 +9,14 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type {Content} from 'genkit/model';
+import type {Content, ContentPart} from 'genkit/model';
 
 const ChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
   parts: z.array(z.object({text: z.string()})),
 });
 
+export type ChatbotInput = z.infer<typeof ChatbotInputSchema>;
 const ChatbotInputSchema = z.object({
   userMessage: z.string().describe("The user's current message to the chatbot."),
   problemTitle: z.string().optional().describe('The title of the current coding problem.'),
@@ -23,12 +24,11 @@ const ChatbotInputSchema = z.object({
   currentCode: z.string().optional().describe("The user's current code solution for the problem."),
   chatHistory: z.array(ChatMessageSchema).optional().describe('The history of the conversation so far.'),
 });
-export type ChatbotInput = z.infer<typeof ChatbotInputSchema>;
 
+export type ChatbotResponse = z.infer<typeof ChatbotResponseSchema>;
 const ChatbotResponseSchema = z.object({
   botResponse: z.string().describe("The chatbot's response to the user."),
 });
-export type ChatbotResponse = z.infer<typeof ChatbotResponseSchema>;
 
 export async function chatbotProcessMessage(input: ChatbotInput): Promise<ChatbotResponse> {
   return chatbotFlow(input);
@@ -41,7 +41,7 @@ const chatbotFlow = ai.defineFlow(
     outputSchema: ChatbotResponseSchema,
   },
   async (input) => {
-    let systemInstruction = `You are AlgoAce, a friendly and expert AI coding tutor. Your primary goal is to help users understand and solve coding problems.
+    let systemInstruction = `You are AlgoAce, your AI coding assistant! My persona is that of a friendly and expert coding tutor. My primary goal is to help users understand and solve coding problems.
 Provide hints, explain concepts, and ask guiding questions to lead the user towards the solution.
 NEVER give away the direct solution or write complete code snippets that solve the core problem.
 Be encouraging, patient, and keep your responses concise and easy to understand.
