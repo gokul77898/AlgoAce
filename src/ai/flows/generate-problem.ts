@@ -9,16 +9,18 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { CodingLanguage } from '@/lib/types';
+import type { CodingLanguage, DsaTopic } from '@/lib/types';
+import { CODING_LANGUAGES, DSA_TOPICS } from '@/lib/types';
 
-const codingLanguages: [CodingLanguage, ...CodingLanguage[]] = ['javascript', 'python', 'java', 'cpp', 'go'];
+const codingLanguagesEnum = z.enum(CODING_LANGUAGES);
+const dsaTopicsEnum = z.enum(DSA_TOPICS);
 
 const GenerateProblemInputSchema = z.object({
   difficulty: z
     .enum(['easy', 'medium', 'hard'])
     .describe('The difficulty level of the coding problem.'),
-  topics: z.string().describe('The topics or categories of the coding problem (e.g., arrays, strings, trees, graphs, dynamic programming).'),
-  language: z.enum(codingLanguages).describe('The preferred coding language for examples.'),
+  topics: z.array(dsaTopicsEnum).min(1).describe('The topics or categories of the coding problem (e.g., arrays, strings, trees, graphs, dynamic programming).'),
+  language: codingLanguagesEnum.describe('The preferred coding language for examples.'),
 });
 export type GenerateProblemInput = z.infer<typeof GenerateProblemInputSchema>;
 
@@ -27,7 +29,7 @@ const GenerateProblemOutputSchema = z.object({
   description: z.string().describe('The detailed description of the coding problem.'),
   constraints: z.string().describe('The constraints for the coding problem.'),
   examples: z.string().describe('Example inputs and expected outputs, tailored to the specified language.'),
-  language: z.enum(codingLanguages).describe('The coding language for which the problem (especially examples) is tailored.'),
+  language: codingLanguagesEnum.describe('The coding language for which the problem (especially examples) is tailored.'),
 });
 export type GenerateProblemOutput = z.infer<typeof GenerateProblemOutputSchema>;
 
@@ -42,7 +44,7 @@ const prompt = ai.definePrompt({
   prompt: `You are a coding interview problem generator. Generate a LeetCode-style coding problem based on the following criteria:
 
 Difficulty: {{{difficulty}}}
-Topics: {{{topics}}}
+Topics: {{#each topics}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 Language for examples: {{{language}}}
 
 The output MUST be a JSON object with the fields: "title", "description", "constraints", "examples", and "language".

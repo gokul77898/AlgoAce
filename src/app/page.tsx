@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FC } from 'react';
-import type { Problem, AnalysisResult, CodingLanguage, ProblemDifficulty } from '@/lib/types';
+import type { Problem, AnalysisResult, CodingLanguage, ProblemDifficulty, DsaTopic } from '@/lib/types';
 import { generateProblem, type GenerateProblemInput } from '@/ai/flows/generate-problem';
 import { analyzeCode, type AnalyzeCodeInput } from '@/ai/flows/analyze-code';
 import { AppHeader } from '@/components/algoace/AppHeader';
@@ -13,23 +13,24 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { CODING_LANGUAGES } from '@/lib/types';
 
 const AlgoAcePage: FC = () => {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [code, setCode] = useState<string>('');
-  const [currentLanguage, setCurrentLanguage] = useState<CodingLanguage>('javascript');
+  const [currentLanguage, setCurrentLanguage] = useState<CodingLanguage>(CODING_LANGUAGES[0]);
   
   const [isLoadingProblem, setIsLoadingProblem] = useState(false);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const { toast } = useToast();
 
-  const handleGenerateProblem = async (values: { difficulty: ProblemDifficulty; topics: string; language: CodingLanguage }) => {
+  const handleGenerateProblem = async (values: { difficulty: ProblemDifficulty; topics: DsaTopic[]; language: CodingLanguage }) => {
     setIsLoadingProblem(true);
     setProblem(null); 
     setAnalysis(null); 
     setCode(''); 
-    setCurrentLanguage(values.language); // Set language based on form selection for upcoming problem
+    setCurrentLanguage(values.language); 
     try {
       const problemInput: GenerateProblemInput = {
         difficulty: values.difficulty,
@@ -38,7 +39,7 @@ const AlgoAcePage: FC = () => {
       };
       const generatedProblem = await generateProblem(problemInput);
       setProblem(generatedProblem);
-      setCurrentLanguage(generatedProblem.language); // Confirm language from generated problem
+      setCurrentLanguage(generatedProblem.language);
       toast({
         title: "Problem Generated!",
         description: `A new ${generatedProblem.language} challenge is ready for you.`,
@@ -50,8 +51,8 @@ const AlgoAcePage: FC = () => {
         description: "Could not generate a new problem. Please try again.",
         variant: "destructive",
       });
-      setProblem(null); // Ensure problem is null on error
-      setCurrentLanguage('javascript'); // Reset language to default on error
+      setProblem(null); 
+      setCurrentLanguage(CODING_LANGUAGES[0]); 
     } finally {
       setIsLoadingProblem(false);
     }
@@ -71,7 +72,7 @@ const AlgoAcePage: FC = () => {
     try {
       const analysisInput: AnalyzeCodeInput = {
         code,
-        language: problem.language, // Use the language from the generated problem
+        language: problem.language, 
         problemDescription: problem.description,
       };
       const analysisResult = await analyzeCode(analysisInput);
@@ -163,7 +164,7 @@ const AlgoAcePage: FC = () => {
           {/* Right Pane */}
           <div className="w-full lg:w-1/2 flex flex-col gap-6">
             <CodeEditor
-              language={problem?.language || currentLanguage} // Use problem's language or fallback to selected
+              language={problem?.language || currentLanguage} 
               problemDescription={problem?.description || ''}
               code={code}
               setCode={setCode}

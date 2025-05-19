@@ -1,27 +1,27 @@
 'use client';
 
-import type { ProblemDifficulty, CodingLanguage } from '@/lib/types';
+import type { ProblemDifficulty, CodingLanguage, DsaTopic } from '@/lib/types';
+import { CODING_LANGUAGES, DSA_TOPICS } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, ChevronDown } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
+import * as React from 'react';
 
-const codingLanguages: [CodingLanguage, ...CodingLanguage[]] = ['javascript', 'python', 'java', 'cpp', 'go'];
+const codingLanguagesEnum = z.enum(CODING_LANGUAGES);
+const dsaTopicsEnum = z.enum(DSA_TOPICS);
 
 const formSchema = z.object({
   difficulty: z.enum(['easy', 'medium', 'hard'] as [ProblemDifficulty, ...ProblemDifficulty[]], {
     required_error: "Difficulty is required.",
   }),
-  topics: z.string().min(1, "Topics are required (e.g., arrays, strings, trees, graphs, dynamic programming, sorting, searching)."),
-  language: z.enum(codingLanguages, {
-    required_error: "Language is required.",
-  }),
+  topics: z.array(dsaTopicsEnum).min(1, "At least one topic is required."),
+  language: codingLanguagesEnum,
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -36,14 +36,16 @@ export function ProblemGeneratorForm({ onGenerateProblem, isLoading }: ProblemGe
     resolver: zodResolver(formSchema),
     defaultValues: {
       difficulty: 'easy',
-      topics: 'arrays, strings, basic algorithms',
-      language: 'javascript',
+      topics: [DSA_TOPICS[0], DSA_TOPICS[1]], // Default to first two topics
+      language: CODING_LANGUAGES[0], // Default to first language in the list
     },
   });
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     await onGenerateProblem(data);
   };
+
+  const selectedTopics = form.watch('topics') || [];
 
   return (
     <Card className="shadow-lg">
@@ -79,64 +81,68 @@ export function ProblemGeneratorForm({ onGenerateProblem, isLoading }: ProblemGe
                 </FormItem>
               )}
             />
+            
             <FormField
               control={form.control}
               name="topics"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Topics / Keywords</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., linked lists, trees, graphs, dynamic programming, sorting" {...field} disabled={isLoading} />
-                  </FormControl>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild disabled={isLoading}>
+                      <Button variant="outline" className="w-full justify-between">
+                        {selectedTopics.length > 0
+                          ? selectedTopics.join(', ').length > 40 ? `${selectedTopics.slice(0,3).join(', ')}...` : selectedTopics.join(', ')
+                          : "Select topics"}
+                        <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
+                      <DropdownMenuLabel>Select Topics</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {DSA_TOPICS.map((topic) => (
+                        <DropdownMenuCheckboxItem
+                          key={topic}
+                          checked={field.value?.includes(topic)}
+                          onCheckedChange={(checked) => {
+                            const currentTopics = field.value || [];
+                            if (checked) {
+                              field.onChange([...currentTopics, topic]);
+                            } else {
+                              field.onChange(currentTopics.filter((t) => t !== topic));
+                            }
+                          }}
+                        >
+                          {topic}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="language"
               render={({ field }) => (
-                <FormItem className="space-y-3">
+                <FormItem>
                   <FormLabel>Preferred Language</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="grid grid-cols-2 gap-x-4 gap-y-2"
-                      disabled={isLoading}
-                    >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="javascript" />
-                        </FormControl>
-                        <FormLabel className="font-normal">JavaScript</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="python" />
-                        </FormControl>
-                        <FormLabel className="font-normal">Python</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="java" />
-                        </FormControl>
-                        <FormLabel className="font-normal">Java</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="cpp" />
-                        </FormControl>
-                        <FormLabel className="font-normal">C++</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="go" />
-                        </FormControl>
-                        <FormLabel className="font-normal">Go</FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {CODING_LANGUAGES.map((lang) => (
+                        <SelectItem key={lang} value={lang}>
+                          {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

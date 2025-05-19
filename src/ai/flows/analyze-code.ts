@@ -11,12 +11,13 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { CodingLanguage } from '@/lib/types';
+import { CODING_LANGUAGES } from '@/lib/types';
 
-const codingLanguages: [CodingLanguage, ...CodingLanguage[]] = ['javascript', 'python', 'java', 'cpp', 'go'];
+const codingLanguagesEnum = z.enum(CODING_LANGUAGES);
 
 const AnalyzeCodeInputSchema = z.object({
   code: z.string().describe('The code to be analyzed.'),
-  language: z.enum(codingLanguages).describe('The programming language of the code.'),
+  language: codingLanguagesEnum.describe('The programming language of the code.'),
   problemDescription: z.string().describe('The description of the problem the code is trying to solve.'),
 });
 export type AnalyzeCodeInput = z.infer<typeof AnalyzeCodeInputSchema>;
