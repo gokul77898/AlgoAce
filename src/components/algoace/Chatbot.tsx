@@ -59,7 +59,7 @@ export const Chatbot: FC<ChatbotProps> = ({
           AlgoAce Assistant
         </CardTitle>
         <CardDescription>
-          Ask for hints or explanations. I'm here to help you learn!
+          Stuck? Ask for hints, concept clarifications, or discuss your approach to the current problem. I'm here to guide you!
         </CardDescription>
       </CardHeader>
       <ScrollArea className="flex-grow p-0" ref={scrollAreaRef}>
