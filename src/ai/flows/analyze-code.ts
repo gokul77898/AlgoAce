@@ -8,7 +8,7 @@
  * - AnalyzeCodeOutput - The return type for the analyzeCode function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai}from '@/ai/genkit';
 import {z} from 'genkit';
 import type { CodingLanguage } from '@/lib/types';
 import { CODING_LANGUAGES } from '@/lib/types';
@@ -47,9 +47,10 @@ const analyzeCodePrompt = ai.definePrompt({
 
   Focus on aspects such as:
   - Code clarity and readability
-  - Efficiency and performance
+  - Efficiency and performance (especially for complex or advanced problems)
   - Potential bugs and errors
   - Adherence to best practices for the specified language ({{language}})
+  - For advanced problems, consider algorithmic complexity, space/time trade-offs, and alternative sophisticated approaches or data structures.
 
   Provide an overall assessment of the code quality and a list of suggestions for improvement.
   Format the output as a JSON object with 'suggestions' (an array of strings) and 'overallQuality' (a string).
